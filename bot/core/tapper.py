@@ -362,9 +362,9 @@ class Tapper:
                         available_upgrades = [
                             data for data in upgrades
                             if data['isAvailable'] is True
-                            and data['isExpired'] is False
-                            and data.get('cooldownSeconds', 0) == 0
-                            and data.get('maxLevel', data['level']) >= data['level']
+                               and data['isExpired'] is False
+                               and data.get('cooldownSeconds', 0) <= 3601
+                               and data.get('maxLevel', data['level']) >= data['level']
                         ]
 
                         queue = []
@@ -378,12 +378,13 @@ class Tapper:
                             significance = profit / max(price, 1)
 
                             free_money = balance - settings.BALANCE_TO_SAVE
-                            max_price_limit = earn_on_hour * 5
+                            max_price_limit = earn_on_hour * 10
 
                             if ((free_money * 0.7) >= price
                                     and profit > 0
                                     and level <= settings.MAX_LEVEL
                                     and price <= settings.MAX_PRICE
+                                    and significance >= 0.00010
                                     and price < max_price_limit):
                                 heapq.heappush(queue, (-significance, upgrade_id, upgrade))
 
@@ -391,16 +392,28 @@ class Tapper:
                             continue
 
                         top_card = heapq.nsmallest(1, queue)[0]
-
                         upgrade = top_card[2]
-
                         upgrade_id = upgrade['id']
                         level = upgrade['level']
                         price = upgrade['price']
                         profit = upgrade['profitPerHourDelta']
+                        coin_name = upgrade['name']
+                        cooldown_seconds = upgrade.get('cooldownSeconds', 0)
 
-                        logger.info(f"{self.session_name} | Sleep <lw>5s</lw> before upgrade <le>{upgrade_id}</le>")
-                        await asyncio.sleep(delay=5)
+                        if not cooldown_seconds:
+                            logger.info(
+                                f'{self.session_name} | Sleep 5s before upgrade <e>{coin_name}</e>'
+                            )
+                            await asyncio.sleep(delay=5)
+
+                        elif cooldown_seconds < 3601:
+                            logger.info(
+                                f'{self.session_name} | Sleep {cooldown_seconds + 12:,}s before upgrade <e>{coin_name}</e>')
+
+                            await asyncio.sleep(delay=cooldown_seconds + 12)
+
+                        else:
+                            continue
 
                         status, upgrades = await buy_upgrade(http_client=http_client, upgrade_id=upgrade_id)
 
