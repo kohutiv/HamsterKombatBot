@@ -140,7 +140,8 @@ class Tapper:
                                 common_price = sum([upgrade['price'] for upgrade in available_combo_cards])
                                 need_cards_count = len(cards)
                                 possible_cards_count = len(available_combo_cards)
-                                is_combo_accessible = need_cards_count == possible_cards_count
+                                upgraded_combo_card = len(upgraded_list)
+                                is_combo_accessible = need_cards_count == possible_cards_count + upgraded_combo_card
 
                                 if not is_combo_accessible:
                                     logger.info(f"{self.session_name} | "
